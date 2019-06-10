@@ -2,6 +2,7 @@ const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
+const session = require("express-session");
 
 const db = require("./database/dbConfig.js");
 const Users = require("./users/users.js");
@@ -9,6 +10,19 @@ const protected = require("./auth/protected-middleware.js");
 
 const server = express();
 
+const sessionConfig = {
+  name: "monkey",
+  secret: "super secret string",
+  cookie: {
+    httpOnly: true,
+    maxAge: 60 * 60 * 1000,
+    secure: false
+  },
+  resave: false,
+  saveUninitialized: true
+};
+
+server.use(session(sessionConfig));
 server.use(helmet());
 server.use(express.json());
 server.use(cors());
@@ -51,13 +65,26 @@ server.post("/api/login", (req, res) => {
     });
 });
 
-
 server.get("/api/users", protected, (req, res) => {
   Users.find()
     .then(users => {
       res.json(users);
     })
     .catch(err => res.send(err));
+});
+
+server.get("/api/auth/logout", (req, res) => {
+  if (req.session) {
+    req.session.destroy(err => {
+      if (err) {
+        res.json({ message: "Error logging out." });
+      } else {
+        res.status(200).json({ message: "You have successfully logged out." });
+      }
+    });
+  } else {
+    res.end();
+  }
 });
 
 const port = 5678;
